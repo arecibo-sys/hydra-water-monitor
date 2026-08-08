@@ -21,6 +21,7 @@ A personal hydration tracker that sets your daily water goal based on your age, 
 - **🎉 Milestone messages** — encouraging notes at 25/50/75/100% of goal
 - **🔔 Sound on goal** — optional chime when you hit 100% (Web Audio, no files)
 - **Stats row** — today's total, glasses count (250 ml = 1), and % of goal
+- **💾 Backup** — export your data to a JSON file and restore it anytime, so tracking survives clearing browser data or switching devices
 
 ## 🧮 How the goal is calculated
 

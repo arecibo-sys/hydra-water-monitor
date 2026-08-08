@@ -96,6 +96,11 @@
   .stat .l{font-size:.75rem; color:var(--muted); margin-top:2px;}
   .stat-grid-3{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:10px;}
 
+  .backup{margin-top:16px; padding-top:16px; border-top:1px solid var(--line);}
+  .backup h2{font-size:1rem; letter-spacing:-.01em; margin-bottom:4px;}
+  .backup .hint{color:var(--muted); font-size:.8rem; margin-bottom:12px;}
+  .backup-btns{display:grid; grid-template-columns:1fr 1fr; gap:8px;}
+
   /* Toggle switch */
   .switch-row{display:flex; align-items:center; justify-content:space-between; margin-top:6px;}
   .switch-row .lbl{font-size:.9rem; font-weight:600;}
@@ -224,6 +229,16 @@
       <div class="stat"><div class="v" id="statToday">0</div><div class="l">Today</div></div>
       <div class="stat"><div class="v" id="statGlasses">0</div><div class="l">Glasses</div></div>
       <div class="stat"><div class="v" id="statPct">0%</div><div class="l">of goal</div></div>
+    </div>
+
+    <div class="backup">
+      <h2>💾 Backup</h2>
+      <p class="hint">Save or restore your data as a JSON file.</p>
+      <div class="backup-btns">
+        <button class="btn btn-ghost" id="exportBtn">Export backup</button>
+        <button class="btn btn-ghost" id="restoreBtn">Restore backup</button>
+      </div>
+      <input type="file" id="restoreFile" accept=".json,application/json" class="hidden">
     </div>
 
     <button class="btn btn-ghost" id="resetBtn" style="margin-top:16px;">Reset today</button>
@@ -585,6 +600,46 @@
     $('activity').value = String(d.profile.activity);
     $('climate').value = String(d.profile.climate);
     $('dashCard').classList.add('hidden'); $('setupCard').classList.remove('hidden');
+  });
+
+  /* ---------- Backup / Restore ---------- */
+  $('exportBtn').addEventListener('click', ()=>{
+    const d = loadState(); if(!d) return;
+    const blob = new Blob([JSON.stringify(d, null, 2)], {type:'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'hydra-backup-' + todayKey() + '.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(()=>URL.revokeObjectURL(url), 1000);
+    toast('Backup exported');
+  });
+
+  $('restoreBtn').addEventListener('click', ()=>{
+    $('restoreFile').click();
+  });
+
+  $('restoreFile').addEventListener('change', e=>{
+    const file = e.target.files && e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = ()=>{
+      try{
+        const data = JSON.parse(reader.result);
+        if(!data || typeof data !== 'object' || !data.profile || typeof data.profile !== 'object'){
+          throw new Error('invalid');
+        }
+        localStorage.setItem('hydra', JSON.stringify(data));
+        render();
+        toast('Backup restored');
+      }catch(err){
+        toast('Invalid backup file');
+      }
+      e.target.value = '';
+    };
+    reader.readAsText(file);
   });
 
   $('remindToggle').addEventListener('change', e=>{
