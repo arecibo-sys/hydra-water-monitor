@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hydra — Water Monitor</title>
+<style>
+  :root{
+    --bg:#f4f1ea; --card:#fffdf7; --ink:#1a1a1a; --muted:#8a8578;
+    --accent:#2f6f4f; --accent-soft:#e3efe7; --line:#e6e1d5;
+    --warn:#b3541e; --radius:18px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg); color:var(--ink); min-height:100vh;
+    display:flex; justify-content:center; padding:24px 16px 60px;
+  }
+  .app{width:100%; max-width:420px;}
+  h1{font-size:1.6rem; letter-spacing:-0.02em; margin-bottom:4px;}
+  .sub{color:var(--muted); font-size:.9rem; margin-bottom:20px;}
+  .card{background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
+    padding:20px; margin-bottom:16px; box-shadow:0 1px 3px rgba(0,0,0,.04);}
+  label{display:block; font-size:.8rem; font-weight:600; color:var(--muted); margin:14px 0 6px;}
+  input,select{width:100%; padding:12px 14px; border:1px solid var(--line); border-radius:12px;
+    background:#fff; font-size:1rem; color:var(--ink); outline:none; transition:border .2s;}
+  input:focus,select:focus{border-color:var(--accent);}
+  .row{display:flex; gap:12px;}
+  .row>div{flex:1;}
+  .btn{width:100%; padding:14px; border:none; border-radius:12px; font-size:1rem; font-weight:600;
+    cursor:pointer; transition:transform .1s, opacity .2s;}
+  .btn:active{transform:scale(.98);}
+  .btn-primary{background:var(--accent); color:#fff;}
+  .btn-ghost{background:var(--accent-soft); color:var(--accent);}
+  .btn:disabled{opacity:.5; cursor:not-allowed;}
+  .hidden{display:none !important;}
+
+  /* Goal ring */
+  .ring-wrap{display:flex; flex-direction:column; align-items:center; padding:8px 0 4px;}
+  .ring{position:relative; width:200px; height:200px;}
+  .ring svg{transform:rotate(-90deg);}
+  .ring .track{fill:none; stroke:var(--accent-soft); stroke-width:14;}
+  .ring .fill{fill:none; stroke:var(--accent); stroke-width:14; stroke-linecap:round;
+    transition:stroke-dashoffset .6s ease;}
+  .ring .center{position:absolute; inset:0; display:flex; flex-direction:column;
+    align-items:center; justify-content:center;}
+  .ring .pct{font-size:2.2rem; font-weight:700; letter-spacing:-.03em;}
+  .ring .of{font-size:.8rem; color:var(--muted);}
+  .goal-line{text-align:center; color:var(--muted); font-size:.85rem; margin-top:6px;}
+
+  .quick{display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-top:16px;}
+  .quick button{padding:10px 4px; border:1px solid var(--line); background:#fff; border-radius:10px;
+    font-size:.85rem; cursor:pointer; transition:all .15s;}
+  .quick button:hover{border-color:var(--accent); color:var(--accent);}
+  .quick button:active{background:var(--accent-soft);}
+
+  .log{list-style:none; margin-top:16px;}
+  .log li{display:flex; justify-content:space-between; align-items:center; padding:10px 0;
+    border-bottom:1px solid var(--line); font-size:.9rem;}
+  .log li:last-child{border-bottom:none;}
+  .log .amt{font-weight:600;}
+  .log .del{background:none; border:none; color:var(--muted); cursor:pointer; font-size:1rem; padding:0 6px;}
+  .log .del:hover{color:var(--warn);}
+  .empty{color:var(--muted); text-align:center; font-size:.85rem; padding:12px 0;}
+
+  .toast{position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px);
+    background:var(--ink); color:#fff; padding:12px 20px; border-radius:30px; font-size:.9rem;
+    opacity:0; transition:all .3s; pointer-events:none; z-index:10;}
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+
+  .stat-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:14px;}
+  .stat{background:var(--accent-soft); border-radius:12px; padding:12px; text-align:center;}
+  .stat .v{font-size:1.3rem; font-weight:700; color:var(--accent);}
+  .stat .l{font-size:.75rem; color:var(--muted); margin-top:2px;}
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>💧 Hydra</h1>
+  <p class="sub">Water monitor — goals tuned to you</p>
+
+  <!-- Setup -->
+  <div class="card" id="setupCard">
+    <div class="row">
+      <div>
+        <label>Age</label>
+        <input type="number" id="age" min="1" max="120" placeholder="e.g. 30">
+      </div>
+      <div>
+        <label>Gender</label>
+        <select id="gender">
+          <option value="male">Male</option>
+          <option value="female">Female</option>
+        </select>
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label>Weight (kg)</label>
+        <input type="number" id="weight" min="20" max="300" placeholder="e.g. 75">
+      </div>
+      <div>
+        <label>Activity</label>
+        <select id="activity">
+          <option value="1.0">Sedentary</option>
+          <option value="1.2" selected>Light</option>
+          <option value="1.4">Moderate</option>
+          <option value="1.6">Active</option>
+          <option value="1.8">Very active</option>
+        </select>
+      </div>
+    </div>
+    <label>Climate</label>
+    <select id="climate">
+      <option value="1.0">Mild</option>
+      <option value="1.1">Hot / humid</option>
+    </select>
+    <button class="btn btn-primary" id="saveBtn" style="margin-top:20px;">Set my goal</button>
+  </div>
+
+  <!-- Dashboard -->
+  <div class="card hidden" id="dashCard">
+    <div class="ring-wrap">
+      <div class="ring">
+        <svg width="200" height="200" viewBox="0 0 200 200">
+          <circle class="track" cx="100" cy="100" r="86"></circle>
+          <circle class="fill" id="fillCircle" cx="100" cy="100" r="86"
+            stroke-dasharray="540.4" stroke-dashoffset="540.4"></circle>
+        </svg>
+        <div class="center">
+          <div class="pct" id="pct">0%</div>
+          <div class="of" id="ofText">0 / 0 ml</div>
+        </div>
+      </div>
+      <div class="goal-line" id="goalLine"></div>
+    </div>
+
+    <div class="quick">
+      <button data-ml="250">🥛 250</button>
+      <button data-ml="500">🧴 500</button>
+      <button data-ml="750">🍶 750</button>
+      <button data-ml="1000">🫗 1000</button>
+    </div>
+
+    <div class="stat-grid">
+      <div class="stat"><div class="v" id="statGoal">0</div><div class="l">Daily goal</div></div>
+      <div class="stat"><div class="v" id="statLeft">0</div><div class="l">ml left</div></div>
+    </div>
+
+    <button class="btn btn-ghost" id="resetBtn" style="margin-top:16px;">Reset today</button>
+    <button class="btn btn-ghost" id="editBtn" style="margin-top:8px;">Edit my profile</button>
+
+    <ul class="log" id="logList"></ul>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  const C = 540.4; // circumference 2*pi*86
+  const $ = id => document.getElementById(id);
+  const store = {
+    get(){ try{ return JSON.parse(localStorage.getItem('hydra')||'null'); }catch(e){ return null; } },
+    set(d){ localStorage.setItem('hydra', JSON.stringify(d)); }
+  };
+
+  function calcGoal(p){
+    // Base: 30-35ml per kg, gender-adjusted
+    let base = p.weight * (p.gender==='male' ? 35 : 31);
+    // Age adjustment: slightly less needed as we age
+    if(p.age >= 55) base *= 0.9;
+    else if(p.age >= 40) base *= 0.95;
+    // Activity & climate multipliers
+    base *= p.activity * p.climate;
+    // Round to nearest 50
+    return Math.round(base/50)*50;
+  }
+
+  function todayKey(){ return new Date().toISOString().slice(0,10); }
+
+  function loadState(){
+    let d = store.get();
+    if(!d || !d.profile) return null;
+    const key = todayKey();
+    if(d.date !== key){ d.date = key; d.intake = 0; d.log = []; store.set(d); }
+    return d;
+  }
+
+  function render(){
+    const d = loadState();
+    if(!d){ $('setupCard').classList.remove('hidden'); $('dashCard').classList.add('hidden'); return; }
+    $('setupCard').classList.add('hidden'); $('dashCard').classList.remove('hidden');
+
+    const goal = d.profile.goal;
+    const intake = d.intake;
+    const pct = Math.min(100, Math.round(intake/goal*100));
+    const left = Math.max(0, goal - intake);
+
+    $('pct').textContent = pct + '%';
+    $('ofText').textContent = intake + ' / ' + goal + ' ml';
+    $('goalLine').textContent = 'Goal: ' + goal + ' ml/day';
+    $('statGoal').textContent = goal + ' ml';
+    $('statLeft').textContent = left + ' ml';
+    $('fillCircle').style.strokeDashoffset = C - (C * pct/100);
+
+    const list = $('logList');
+    list.innerHTML = '';
+    if(!d.log.length){ list.innerHTML = '<li class="empty">No drinks logged yet today</li>'; }
+    else{
+      d.log.forEach((e,i)=>{
+        const li = document.createElement('li');
+        const time = new Date(e.t).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+        li.innerHTML = '<span class="amt">+'+e.ml+' ml</span><span>'+time+' <button class="del" data-i="'+i+'">✕</button></span>';
+        list.appendChild(li);
+      });
+    }
+  }
+
+  function toast(msg){
+    const t = $('toast'); t.textContent = msg; t.classList.add('show');
+    clearTimeout(t._h); t._h = setTimeout(()=>t.classList.remove('show'), 1800);
+  }
+
+  $('saveBtn').addEventListener('click', ()=>{
+    const age = parseInt($('age').value);
+    const weight = parseFloat($('weight').value);
+    if(!age || age<1 || age>120){ toast('Enter a valid age'); return; }
+    if(!weight || weight<20 || weight>300){ toast('Enter a valid weight'); return; }
+    const profile = {
+      age, gender: $('gender').value,
+      weight, activity: parseFloat($('activity').value),
+      climate: parseFloat($('climate').value),
+      goal: calcGoal({age, gender:$('gender').value, weight,
+        activity:parseFloat($('activity').value), climate:parseFloat($('climate').value)})
+    };
+    store.set({ profile, date: todayKey(), intake: 0, log: [] });
+    toast('Goal set: '+profile.goal+' ml/day');
+    render();
+  });
+
+  document.querySelectorAll('.quick button').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      const d = loadState(); if(!d) return;
+      const ml = parseInt(b.dataset.ml);
+      d.intake += ml; d.log.push({ml, t: Date.now()});
+      store.set(d); render();
+      const goal = d.profile.goal;
+      if(d.intake >= goal) toast('🎉 Goal reached!');
+      else toast('+'+ml+' ml logged');
+    });
+  });
+
+  $('logList').addEventListener('click', e=>{
+    const btn = e.target.closest('.del'); if(!btn) return;
+    const d = loadState(); if(!d) return;
+    const i = parseInt(btn.dataset.i);
+    d.intake -= d.log[i].ml; d.log.splice(i,1);
+    store.set(d); render();
+  });
+
+  $('resetBtn').addEventListener('click', ()=>{
+    const d = loadState(); if(!d) return;
+    d.intake = 0; d.log = []; store.set(d); render(); toast('Today reset');
+  });
+
+  $('editBtn').addEventListener('click', ()=>{
+    const d = loadState(); if(!d) return;
+    $('age').value = d.profile.age; $('gender').value = d.profile.gender;
+    $('weight').value = d.profile.weight;
+    $('activity').value = String(d.profile.activity);
+    $('climate').value = String(d.profile.climate);
+    $('dashCard').classList.add('hidden'); $('setupCard').classList.remove('hidden');
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
