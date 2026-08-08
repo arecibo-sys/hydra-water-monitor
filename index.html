@@ -4,6 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Hydra — Water Reminder</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#2f6f4f">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Hydra">
+<link rel="apple-touch-icon" href="icon-192.png">
 <style>
   :root{
     --bg:#f4f1ea; --card:#fffdf7; --ink:#1a1a1a; --muted:#8a8578;
@@ -90,6 +96,15 @@
   .reminder .drink:active{transform:scale(.96);}
   .reminder .x{background:none; border:none; color:var(--muted); cursor:pointer; font-size:1.1rem;}
 
+  /* Install hint (PWA) */
+  .install-card{display:flex; align-items:center; gap:10px; background:var(--accent-soft);
+    border:1px solid var(--line); border-radius:14px; padding:12px 14px; margin-bottom:16px;}
+  .install-card .install-text{flex:1; line-height:1.3;}
+  .install-card .install-text b{display:block; font-size:.9rem; color:var(--accent);}
+  .install-card .install-text span{font-size:.75rem; color:var(--muted);}
+  .install-card .btn{width:auto; padding:10px 14px; font-size:.8rem; flex:0 0 auto;}
+  .install-card .x{background:none; border:none; color:var(--muted); cursor:pointer; font-size:1rem; padding:0 2px;}
+
   .stat-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:14px;}
   .stat{background:var(--accent-soft); border-radius:12px; padding:12px; text-align:center;}
   .stat .v{font-size:1.3rem; font-weight:700; color:var(--accent);}
@@ -151,6 +166,16 @@
 <div class="app">
   <h1>💧 Hydra</h1>
   <p class="sub">Water reminder — goals tuned to you</p>
+
+  <!-- Install hint (PWA) -->
+  <div class="install-card hidden" id="installCard">
+    <div class="install-text">
+      <b id="installTitle">Install Hydra</b>
+      <span id="installMsg">Add to your Home Screen for a native app feel.</span>
+    </div>
+    <button class="btn btn-ghost" id="installBtn">Install app</button>
+    <button class="x" id="installClose">✕</button>
+  </div>
 
   <!-- Setup -->
   <div class="card" id="setupCard">
@@ -679,6 +704,61 @@
   // reminder scheduler: check every 30s (robust to tab sleep)
   setInterval(reminderTick, 30000);
   document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) reminderTick(); });
+
+  /* ---------- PWA install ---------- */
+  let deferredPrompt = null;
+  const installCard = $('installCard');
+  const installBtn = $('installBtn');
+  const installClose = $('installClose');
+  const installMsg = $('installMsg');
+
+  function isStandalone(){
+    return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches)
+      || (navigator.standalone === true);
+  }
+
+  window.addEventListener('beforeinstallprompt', (e)=>{
+    e.preventDefault();
+    deferredPrompt = e;
+    if(!isStandalone()){
+      installMsg.textContent = 'Install Hydra on your device for quick access.';
+      installCard.classList.remove('hidden');
+    }
+  });
+
+  installBtn.addEventListener('click', async ()=>{
+    if(deferredPrompt){
+      deferredPrompt.prompt();
+      await deferredPrompt.userChoice;
+      deferredPrompt = null;
+      installCard.classList.add('hidden');
+    } else {
+      // No install prompt available (e.g. iPad Safari) — show manual instructions
+      installMsg.textContent = 'Tap Share  →  Add to Home Screen  →  Add.';
+      installBtn.classList.add('hidden');
+    }
+  });
+
+  installClose.addEventListener('click', ()=>{
+    installCard.classList.add('hidden');
+  });
+
+  // iPad Safari: beforeinstallprompt may never fire — show a manual hint instead
+  if(!isStandalone()){
+    setTimeout(()=>{
+      if(!deferredPrompt && installCard.classList.contains('hidden')){
+        installMsg.textContent = 'Tip: Share  →  Add to Home Screen to install.';
+        installCard.classList.remove('hidden');
+      }
+    }, 3000);
+  }
+
+  // Register service worker
+  if('serviceWorker' in navigator){
+    window.addEventListener('load', ()=>{
+      navigator.serviceWorker.register('sw.js').catch(()=>{});
+    });
+  }
 
   render();
 })();
