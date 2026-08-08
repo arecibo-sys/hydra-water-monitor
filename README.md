@@ -11,9 +11,16 @@ A personal hydration tracker that sets your daily water goal based on your age, 
 - **Personalized daily goal** — calculated from age, gender, weight, activity, and climate
 - **Animated progress ring** — see your % of goal at a glance
 - **Quick-log buttons** — tap 250 / 500 / 750 / 1000 ml in one tap
+- **Custom amount** — log any ml with a custom input
 - **Today's log** — every drink recorded with a timestamp, deletable
 - **Auto-resets daily** — fresh start each day, history persists in your browser
 - **Edit profile anytime** — tweak your settings and the goal recalculates
+- **⏰ Reminders** — configurable nudge every 30/60/90/120 min via browser notifications + in-app toast
+- **📊 Weekly chart** — last 7 days of intake vs goal as a bar chart
+- **🔥 Streak & history** — consecutive days meeting goal, best streak, and a recent-days heatmap
+- **🎉 Milestone messages** — encouraging notes at 25/50/75/100% of goal
+- **🔔 Sound on goal** — optional chime when you hit 100% (Web Audio, no files)
+- **Stats row** — today's total, glasses count (250 ml = 1), and % of goal
 
 ## 🧮 How the goal is calculated
 

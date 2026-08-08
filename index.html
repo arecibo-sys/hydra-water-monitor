@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Hydra — Water Monitor</title>
+<title>Hydra — Water Reminder</title>
 <style>
   :root{
     --bg:#f4f1ea; --card:#fffdf7; --ink:#1a1a1a; --muted:#8a8578;
@@ -21,6 +21,8 @@
   .sub{color:var(--muted); font-size:.9rem; margin-bottom:20px;}
   .card{background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
     padding:20px; margin-bottom:16px; box-shadow:0 1px 3px rgba(0,0,0,.04);}
+  .card h2{font-size:1rem; letter-spacing:-.01em; margin-bottom:4px;}
+  .card .hint{color:var(--muted); font-size:.8rem; margin-bottom:12px;}
   label{display:block; font-size:.8rem; font-weight:600; color:var(--muted); margin:14px 0 6px;}
   input,select{width:100%; padding:12px 14px; border:1px solid var(--line); border-radius:12px;
     background:#fff; font-size:1rem; color:var(--ink); outline:none; transition:border .2s;}
@@ -54,6 +56,13 @@
   .quick button:hover{border-color:var(--accent); color:var(--accent);}
   .quick button:active{background:var(--accent-soft);}
 
+  /* Custom amount */
+  .custom{display:flex; gap:8px; margin-top:10px;}
+  .custom input{flex:1; text-align:center;}
+  .custom button{flex:0 0 auto; padding:12px 18px; border:none; border-radius:12px;
+    background:var(--accent); color:#fff; font-weight:600; cursor:pointer; font-size:.9rem;}
+  .custom button:active{transform:scale(.98);}
+
   .log{list-style:none; margin-top:16px;}
   .log li{display:flex; justify-content:space-between; align-items:center; padding:10px 0;
     border-bottom:1px solid var(--line); font-size:.9rem;}
@@ -65,19 +74,78 @@
 
   .toast{position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px);
     background:var(--ink); color:#fff; padding:12px 20px; border-radius:30px; font-size:.9rem;
-    opacity:0; transition:all .3s; pointer-events:none; z-index:10;}
+    opacity:0; transition:all .3s; pointer-events:none; z-index:10; max-width:90%; text-align:center;}
   .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+
+  /* Reminder banner */
+  .reminder{position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px);
+    background:var(--ink); color:#fff; border-radius:16px; padding:14px 16px; width:min(90%,360px);
+    box-shadow:0 8px 24px rgba(0,0,0,.25); opacity:0; transition:all .3s; z-index:11;
+    display:flex; align-items:center; gap:12px;}
+  .reminder.show{opacity:1; transform:translateX(-50%) translateY(0);}
+  .reminder .txt{flex:1; font-size:.9rem; line-height:1.3;}
+  .reminder .txt b{display:block; font-size:1rem; margin-bottom:2px;}
+  .reminder .drink{background:var(--accent); color:#fff; border:none; border-radius:10px;
+    padding:10px 12px; font-weight:600; cursor:pointer; font-size:.85rem; white-space:nowrap;}
+  .reminder .drink:active{transform:scale(.96);}
+  .reminder .x{background:none; border:none; color:var(--muted); cursor:pointer; font-size:1.1rem;}
 
   .stat-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:14px;}
   .stat{background:var(--accent-soft); border-radius:12px; padding:12px; text-align:center;}
   .stat .v{font-size:1.3rem; font-weight:700; color:var(--accent);}
   .stat .l{font-size:.75rem; color:var(--muted); margin-top:2px;}
+  .stat-grid-3{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:10px;}
+
+  /* Toggle switch */
+  .switch-row{display:flex; align-items:center; justify-content:space-between; margin-top:6px;}
+  .switch-row .lbl{font-size:.9rem; font-weight:600;}
+  .switch{position:relative; width:48px; height:28px; flex:0 0 auto;}
+  .switch input{opacity:0; width:0; height:0;}
+  .slider{position:absolute; inset:0; background:var(--line); border-radius:28px; cursor:pointer; transition:.25s;}
+  .slider:before{content:""; position:absolute; height:22px; width:22px; left:3px; top:3px;
+    background:#fff; border-radius:50%; transition:.25s; box-shadow:0 1px 3px rgba(0,0,0,.2);}
+  .switch input:checked + .slider{background:var(--accent);}
+  .switch input:checked + .slider:before{transform:translateX(20px);}
+
+  /* Weekly chart */
+  .chart{display:flex; align-items:flex-end; gap:6px; height:120px; margin-top:14px; position:relative;}
+  .chart .bar-col{flex:1; display:flex; flex-direction:column; align-items:center; gap:6px; height:100%; justify-content:flex-end;}
+  .chart .bar{width:100%; max-width:34px; background:var(--accent-soft); border-radius:6px 6px 0 0;
+    transition:height .5s ease; position:relative;}
+  .chart .bar.today{background:var(--accent);}
+  .chart .bar .val{position:absolute; top:-18px; left:50%; transform:translateX(-50%);
+    font-size:.6rem; color:var(--muted); white-space:nowrap;}
+  .chart .bar-col .day{font-size:.65rem; color:var(--muted);}
+  .chart .goal-line{position:absolute; left:0; right:0; border-top:1px dashed var(--warn); opacity:.6;}
+  .chart .goal-line span{position:absolute; right:0; top:-16px; font-size:.6rem; color:var(--warn);}
+
+  /* Streak + heatmap */
+  .streak-row{display:flex; align-items:center; gap:14px; margin-top:6px;}
+  .streak-big{font-size:2rem; font-weight:700; color:var(--accent); line-height:1;}
+  .streak-big small{font-size:.8rem; color:var(--muted); font-weight:600;}
+  .streak-meta{font-size:.8rem; color:var(--muted); line-height:1.5;}
+  .heatmap{display:grid; grid-template-columns:repeat(7,1fr); gap:5px; margin-top:14px;}
+  .heatmap .cell{aspect-ratio:1; border-radius:5px; background:var(--accent-soft); position:relative;}
+  .heatmap .cell.low{background:#eef0e6;}
+  .heatmap .cell.mid{background:#bcd8c6;}
+  .heatmap .cell.high{background:#7fb894;}
+  .heatmap .cell.full{background:var(--accent);}
+  .heatmap .cell.today{outline:2px solid var(--ink);}
+  .heatmap .cell .tip{display:none; position:absolute; bottom:110%; left:50%; transform:translateX(-50%);
+    background:var(--ink); color:#fff; font-size:.65rem; padding:4px 6px; border-radius:6px; white-space:nowrap; z-index:5;}
+  .heatmap .cell:hover .tip{display:block;}
+  .heatmap-legend{display:flex; align-items:center; gap:6px; margin-top:10px; font-size:.65rem; color:var(--muted);}
+  .heatmap-legend .sw{width:12px; height:12px; border-radius:3px; background:var(--accent-soft);}
+  .heatmap-legend .sw.low{background:#eef0e6;}
+  .heatmap-legend .sw.mid{background:#bcd8c6;}
+  .heatmap-legend .sw.high{background:#7fb894;}
+  .heatmap-legend .sw.full{background:var(--accent);}
 </style>
 </head>
 <body>
 <div class="app">
   <h1>💧 Hydra</h1>
-  <p class="sub">Water monitor — goals tuned to you</p>
+  <p class="sub">Water reminder — goals tuned to you</p>
 
   <!-- Setup -->
   <div class="card" id="setupCard">
@@ -142,9 +210,20 @@
       <button data-ml="1000">🫗 1000</button>
     </div>
 
+    <div class="custom">
+      <input type="number" id="customMl" min="1" max="5000" placeholder="Custom ml" inputmode="numeric">
+      <button id="customBtn">Add</button>
+    </div>
+
     <div class="stat-grid">
       <div class="stat"><div class="v" id="statGoal">0</div><div class="l">Daily goal</div></div>
       <div class="stat"><div class="v" id="statLeft">0</div><div class="l">ml left</div></div>
+    </div>
+
+    <div class="stat-grid-3">
+      <div class="stat"><div class="v" id="statToday">0</div><div class="l">Today</div></div>
+      <div class="stat"><div class="v" id="statGlasses">0</div><div class="l">Glasses</div></div>
+      <div class="stat"><div class="v" id="statPct">0%</div><div class="l">of goal</div></div>
     </div>
 
     <button class="btn btn-ghost" id="resetBtn" style="margin-top:16px;">Reset today</button>
@@ -152,9 +231,57 @@
 
     <ul class="log" id="logList"></ul>
   </div>
+
+  <!-- Reminders -->
+  <div class="card hidden" id="remindCard">
+    <h2>⏰ Reminders</h2>
+    <p class="hint">Get nudged to drink throughout the day.</p>
+    <div class="switch-row">
+      <span class="lbl">Remind me</span>
+      <label class="switch"><input type="checkbox" id="remindToggle"><span class="slider"></span></label>
+    </div>
+    <label>Every</label>
+    <select id="remindInterval">
+      <option value="30">30 minutes</option>
+      <option value="60" selected>60 minutes</option>
+      <option value="90">90 minutes</option>
+      <option value="120">120 minutes</option>
+    </select>
+    <div class="switch-row" style="margin-top:16px;">
+      <span class="lbl">Sound on goal</span>
+      <label class="switch"><input type="checkbox" id="soundToggle" checked><span class="slider"></span></label>
+    </div>
+  </div>
+
+  <!-- Weekly chart -->
+  <div class="card hidden" id="weekCard">
+    <h2>📊 Last 7 days</h2>
+    <p class="hint">ml logged per day vs your goal.</p>
+    <div class="chart" id="chart"></div>
+  </div>
+
+  <!-- Streak / history -->
+  <div class="card hidden" id="streakCard">
+    <h2>🔥 Streak &amp; history</h2>
+    <div class="streak-row">
+      <div class="streak-big" id="streakNum">0<small> days</small></div>
+      <div class="streak-meta" id="streakMeta"></div>
+    </div>
+    <div class="heatmap" id="heatmap"></div>
+    <div class="heatmap-legend">
+      <span>Less</span>
+      <span class="sw low"></span><span class="sw mid"></span><span class="sw high"></span><span class="sw full"></span>
+      <span>Goal</span>
+    </div>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
+<div class="reminder" id="reminder">
+  <div class="txt"><b>Time to drink! 💧</b>Have a glass of water.</div>
+  <button class="drink" id="reminderDrink">+250ml</button>
+  <button class="x" id="reminderClose">✕</button>
+</div>
 
 <script>
 (function(){
@@ -166,31 +293,129 @@
   };
 
   function calcGoal(p){
-    // Base: 30-35ml per kg, gender-adjusted
     let base = p.weight * (p.gender==='male' ? 35 : 31);
-    // Age adjustment: slightly less needed as we age
     if(p.age >= 55) base *= 0.9;
     else if(p.age >= 40) base *= 0.95;
-    // Activity & climate multipliers
     base *= p.activity * p.climate;
-    // Round to nearest 50
     return Math.round(base/50)*50;
   }
 
   function todayKey(){ return new Date().toISOString().slice(0,10); }
+  function keyForOffset(offset){
+    const d = new Date(); d.setDate(d.getDate() - offset);
+    return d.toISOString().slice(0,10);
+  }
+
+  function defaults(){
+    return {
+      profile:null, date:todayKey(), intake:0, log:[],
+      history:{}, celebrated:[],
+      reminders:{enabled:false, interval:60},
+      sound:true, lastReminder:0
+    };
+  }
 
   function loadState(){
     let d = store.get();
-    if(!d || !d.profile) return null;
+    if(!d) d = defaults();
+    else d = Object.assign(defaults(), d);
+    if(!d.profile) return null;
     const key = todayKey();
-    if(d.date !== key){ d.date = key; d.intake = 0; d.log = []; store.set(d); }
+    if(d.date !== key){
+      // roll over: archive yesterday's total into history
+      if(d.date) d.history[d.date] = d.intake;
+      d.date = key; d.intake = 0; d.log = []; d.celebrated = [];
+      store.set(d);
+    }
     return d;
   }
 
+  function save(d){ store.set(d); }
+
+  /* ---------- Audio chime ---------- */
+  let audioCtx = null;
+  function ensureAudio(){
+    if(!audioCtx){
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if(AC) audioCtx = new AC();
+    }
+    if(audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+    return audioCtx;
+  }
+  function playChime(){
+    const ctx = ensureAudio(); if(!ctx) return;
+    const now = ctx.currentTime;
+    [523.25, 659.25, 783.99].forEach((f,i)=>{
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = 'sine'; o.frequency.value = f;
+      g.gain.setValueAtTime(0, now + i*0.12);
+      g.gain.linearRampToValueAtTime(0.25, now + i*0.12 + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.001, now + i*0.12 + 0.5);
+      o.connect(g); g.connect(ctx.destination);
+      o.start(now + i*0.12); o.stop(now + i*0.12 + 0.55);
+    });
+  }
+
+  /* ---------- Progress messages ---------- */
+  const MILESTONES = [
+    {pct:25, msg:'Great start! 💪'},
+    {pct:50, msg:'Halfway there! 👏'},
+    {pct:75, msg:'Almost there! 🔥'},
+    {pct:100,msg:'Goal reached! 🎉'}
+  ];
+  function checkMilestones(d, before, after){
+    const goal = d.profile.goal;
+    let fired = false;
+    for(const m of MILESTONES){
+      if(before < m.pct && after >= m.pct && !d.celebrated.includes(m.pct)){
+        d.celebrated.push(m.pct);
+        toast(m.msg);
+        if(m.pct === 100 && d.sound) playChime();
+        fired = true;
+      }
+    }
+    return fired;
+  }
+
+  /* ---------- Reminders ---------- */
+  function requestNotifPermission(){
+    if('Notification' in window && Notification.permission === 'default'){
+      Notification.requestPermission();
+    }
+  }
+  function showReminder(){
+    const d = loadState(); if(!d) return;
+    const r = $('reminder');
+    r.classList.add('show');
+    clearTimeout(r._h);
+    r._h = setTimeout(()=>r.classList.remove('show'), 20000);
+    if('Notification' in window && Notification.permission === 'granted'){
+      try{
+        new Notification('💧 Time to drink!', {body:'Have a glass of water (+250ml)', tag:'hydra-reminder'});
+      }catch(e){}
+    }
+  }
+  function reminderTick(){
+    const d = loadState(); if(!d) return;
+    if(!d.reminders.enabled) return;
+    const now = Date.now();
+    const interval = (d.reminders.interval || 60) * 60 * 1000;
+    if(now - d.lastReminder >= interval){
+      d.lastReminder = now; save(d);
+      showReminder();
+    }
+  }
+
+  /* ---------- Render ---------- */
   function render(){
     const d = loadState();
-    if(!d){ $('setupCard').classList.remove('hidden'); $('dashCard').classList.add('hidden'); return; }
-    $('setupCard').classList.add('hidden'); $('dashCard').classList.remove('hidden');
+    if(!d){
+      $('setupCard').classList.remove('hidden');
+      ['dashCard','remindCard','weekCard','streakCard'].forEach(id=>$(id).classList.add('hidden'));
+      return;
+    }
+    $('setupCard').classList.add('hidden');
+    ['dashCard','remindCard','weekCard','streakCard'].forEach(id=>$(id).classList.remove('hidden'));
 
     const goal = d.profile.goal;
     const intake = d.intake;
@@ -202,8 +427,17 @@
     $('goalLine').textContent = 'Goal: ' + goal + ' ml/day';
     $('statGoal').textContent = goal + ' ml';
     $('statLeft').textContent = left + ' ml';
+    $('statToday').textContent = intake + ' ml';
+    $('statGlasses').textContent = Math.round(intake/250);
+    $('statPct').textContent = pct + '%';
     $('fillCircle').style.strokeDashoffset = C - (C * pct/100);
 
+    // reminder controls
+    $('remindToggle').checked = !!d.reminders.enabled;
+    $('remindInterval').value = String(d.reminders.interval || 60);
+    $('soundToggle').checked = !!d.sound;
+
+    // log list
     const list = $('logList');
     list.innerHTML = '';
     if(!d.log.length){ list.innerHTML = '<li class="empty">No drinks logged yet today</li>'; }
@@ -215,13 +449,88 @@
         list.appendChild(li);
       });
     }
+
+    renderChart(d, goal);
+    renderStreak(d, goal);
+  }
+
+  function renderChart(d, goal){
+    const chart = $('chart');
+    const days = [];
+    let maxVal = goal;
+    for(let i=6;i>=0;i--){
+      const key = keyForOffset(i);
+      const total = (i===0) ? d.intake : (d.history[key] || 0);
+      days.push({key, total, today:i===0});
+      if(total > maxVal) maxVal = total;
+    }
+    const scale = maxVal || 1;
+    let html = '<div class="goal-line" style="bottom:'+(goal/scale*100)+'%"><span>goal</span></div>';
+    days.forEach(day=>{
+      const h = Math.max(2, day.total/scale*100);
+      const label = new Date(day.key+'T12:00:00').toLocaleDateString([], {weekday:'narrow'});
+      html += '<div class="bar-col"><div class="bar'+(day.today?' today':'')+'" style="height:'+h+'%">'+
+        '<span class="val">'+(day.total||'')+'</span></div><span class="day">'+label+'</span></div>';
+    });
+    chart.innerHTML = html;
+  }
+
+  function renderStreak(d, goal){
+    // consecutive days meeting goal, ending today (or yesterday if today not met yet)
+    let streak = 0;
+    let start = (d.intake >= goal) ? 0 : 1;
+    for(let i=start; i<400; i++){
+      const key = keyForOffset(i);
+      const total = (i===0) ? d.intake : (d.history[key] || 0);
+      if(total >= goal) streak++;
+      else break;
+    }
+    // best streak from history
+    let best = 0, cur = 0;
+    const keys = Object.keys(d.history).sort();
+    if(d.intake >= goal) keys.push(todayKey());
+    for(let i=0;i<keys.length;i++){
+      const total = d.history[keys[i]] || (keys[i]===todayKey()?d.intake:0);
+      if(total >= goal){ cur++; best = Math.max(best, cur); }
+      else cur = 0;
+    }
+    $('streakNum').innerHTML = streak + '<small> days</small>';
+    $('streakMeta').textContent = 'Best: ' + best + ' day' + (best===1?'':'s') +
+      (d.intake >= goal ? ' · goal met today 🎉' : ' · ' + Math.max(0, goal-d.intake) + ' ml to go');
+
+    // heatmap: last 28 days
+    const hm = $('heatmap');
+    let cells = '';
+    for(let i=27;i>=0;i--){
+      const key = keyForOffset(i);
+      const total = (i===0) ? d.intake : (d.history[key] || 0);
+      const ratio = total/goal;
+      let cls = 'low';
+      if(ratio >= 1) cls = 'full';
+      else if(ratio >= 0.75) cls = 'high';
+      else if(ratio >= 0.4) cls = 'mid';
+      const date = new Date(key+'T12:00:00').toLocaleDateString([], {month:'short', day:'numeric'});
+      cells += '<div class="cell '+cls+(i===0?' today':'')+'"><span class="tip">'+date+': '+total+' ml</span></div>';
+    }
+    hm.innerHTML = cells;
   }
 
   function toast(msg){
     const t = $('toast'); t.textContent = msg; t.classList.add('show');
-    clearTimeout(t._h); t._h = setTimeout(()=>t.classList.remove('show'), 1800);
+    clearTimeout(t._h); t._h = setTimeout(()=>t.classList.remove('show'), 2000);
   }
 
+  function addMl(ml){
+    const d = loadState(); if(!d) return;
+    const before = Math.round(d.intake/d.profile.goal*100);
+    d.intake += ml; d.log.push({ml, t: Date.now()});
+    const after = Math.round(d.intake/d.profile.goal*100);
+    const fired = checkMilestones(d, before, after);
+    save(d); render();
+    if(!fired && after < 100) toast('+'+ml+' ml logged');
+  }
+
+  /* ---------- Events ---------- */
   $('saveBtn').addEventListener('click', ()=>{
     const age = parseInt($('age').value);
     const weight = parseFloat($('weight').value);
@@ -234,7 +543,9 @@
       goal: calcGoal({age, gender:$('gender').value, weight,
         activity:parseFloat($('activity').value), climate:parseFloat($('climate').value)})
     };
-    store.set({ profile, date: todayKey(), intake: 0, log: [] });
+    const d = loadState() || defaults();
+    d.profile = profile;
+    save(d);
     toast('Goal set: '+profile.goal+' ml/day');
     render();
   });
@@ -242,26 +553,29 @@
   document.querySelectorAll('.quick button').forEach(b=>{
     b.addEventListener('click', ()=>{
       const d = loadState(); if(!d) return;
-      const ml = parseInt(b.dataset.ml);
-      d.intake += ml; d.log.push({ml, t: Date.now()});
-      store.set(d); render();
-      const goal = d.profile.goal;
-      if(d.intake >= goal) toast('🎉 Goal reached!');
-      else toast('+'+ml+' ml logged');
+      addMl(parseInt(b.dataset.ml));
     });
   });
+
+  $('customBtn').addEventListener('click', ()=>{
+    const d = loadState(); if(!d) return;
+    const v = parseInt($('customMl').value);
+    if(!v || v<1 || v>5000){ toast('Enter a valid amount'); return; }
+    addMl(v); $('customMl').value = '';
+  });
+  $('customMl').addEventListener('keydown', e=>{ if(e.key==='Enter') $('customBtn').click(); });
 
   $('logList').addEventListener('click', e=>{
     const btn = e.target.closest('.del'); if(!btn) return;
     const d = loadState(); if(!d) return;
     const i = parseInt(btn.dataset.i);
     d.intake -= d.log[i].ml; d.log.splice(i,1);
-    store.set(d); render();
+    save(d); render();
   });
 
   $('resetBtn').addEventListener('click', ()=>{
     const d = loadState(); if(!d) return;
-    d.intake = 0; d.log = []; store.set(d); render(); toast('Today reset');
+    d.intake = 0; d.log = []; d.celebrated = []; save(d); render(); toast('Today reset');
   });
 
   $('editBtn').addEventListener('click', ()=>{
@@ -272,6 +586,44 @@
     $('climate').value = String(d.profile.climate);
     $('dashCard').classList.add('hidden'); $('setupCard').classList.remove('hidden');
   });
+
+  $('remindToggle').addEventListener('change', e=>{
+    const d = loadState(); if(!d) return;
+    d.reminders.enabled = e.target.checked;
+    if(e.target.checked){
+      d.lastReminder = Date.now();
+      requestNotifPermission();
+      toast('Reminders on — every ' + (d.reminders.interval||60) + ' min');
+    } else {
+      toast('Reminders off');
+    }
+    save(d);
+  });
+
+  $('remindInterval').addEventListener('change', e=>{
+    const d = loadState(); if(!d) return;
+    d.reminders.interval = parseInt(e.target.value);
+    d.lastReminder = Date.now(); // restart the clock
+    save(d);
+  });
+
+  $('soundToggle').addEventListener('change', e=>{
+    const d = loadState(); if(!d) return;
+    d.sound = e.target.checked; save(d);
+    if(d.sound) playChime();
+  });
+
+  $('reminderDrink').addEventListener('click', ()=>{
+    $('reminder').classList.remove('show');
+    addMl(250);
+  });
+  $('reminderClose').addEventListener('click', ()=>{
+    $('reminder').classList.remove('show');
+  });
+
+  // reminder scheduler: check every 30s (robust to tab sleep)
+  setInterval(reminderTick, 30000);
+  document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) reminderTick(); });
 
   render();
 })();
