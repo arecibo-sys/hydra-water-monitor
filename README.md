@@ -28,8 +28,9 @@ A personal hydration tracker that sets your daily water goal based on your age, 
 
 - Base: 35 ml/kg (male) or 31 ml/kg (female)
 - Age adjustment: −5% at 40+, −10% at 55+
-- × activity multiplier (sedentary → very active)
-- × climate (hot/humid adds 10%)
+- Activity: mild bump only (sedentary 1.0 → very active 1.2) — the ml/kg baseline already assumes a normal active adult
+- Climate: hot/humid adds ~10%
+- Capped at 3500 ml/day so the goal never overshoots the healthy range (National Academies: ~3.7 L total water for men)
 
 ## 🛠 Tech
 

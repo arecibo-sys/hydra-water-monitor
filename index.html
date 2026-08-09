@@ -336,7 +336,13 @@
     let base = p.weight * (p.gender==='male' ? 35 : 31);
     if(p.age >= 55) base *= 0.9;
     else if(p.age >= 40) base *= 0.95;
-    base *= p.activity * p.climate;
+    // The 35/31 ml-per-kg baseline already assumes a normal active adult,
+    // so activity only gets a mild bump instead of a full 1.0-1.8 multiplier.
+    const actMap = {1.0:1.0, 1.2:1.05, 1.4:1.1, 1.6:1.15, 1.8:1.2};
+    base *= (actMap[p.activity] != null ? actMap[p.activity] : 1.0);
+    base *= p.climate; // hot/humid adds ~10%
+    // Cap so the goal never overshoots the healthy range (<= ~3.5 L).
+    base = Math.min(base, 3500);
     return Math.round(base/50)*50;
   }
 
