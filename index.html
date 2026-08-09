@@ -766,6 +766,16 @@
     });
   }
 
+  /* Migrate stored goal: recompute with the capped formula so stale high
+     goals (e.g. 3700/4900 from the old uncapped calc) correct on load. */
+  (function migrateGoal(){
+    const d = loadState();
+    if(!d || !d.profile) return;
+    const fresh = calcGoal({age:d.profile.age, gender:d.profile.gender,
+      weight:d.profile.weight, activity:d.profile.activity, climate:d.profile.climate});
+    if(d.profile.goal !== fresh){ d.profile.goal = fresh; save(d); }
+  })();
+
   render();
 })();
 </script>

@@ -1,5 +1,5 @@
 /* Hydra service worker — cache-first app shell */
-const CACHE = 'hydra-v1';
+const CACHE = 'hydra-v2'; // bumped to force app-shell refresh after goal-formula fix
 const SHELL = [
   './',
   './index.html',
